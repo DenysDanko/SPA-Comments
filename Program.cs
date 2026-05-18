@@ -1,11 +1,18 @@
 using CommentSystem.Api.Data;
+using CommentSystem.Api.Mappings;
+using CommentSystem.Api.Services;
 using Microsoft.EntityFrameworkCore;
+using SPA_Comments.Services;
 
 var builder = WebApplication.CreateBuilder(args);
 
 // Add services to the container.
 builder.Services.AddDbContext<ApplicationDbContext>(options =>
     options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
+
+builder.Services.AddScoped<ICommentService, CommentService>();
+
+builder.Services.AddAutoMapper(cfg => { }, typeof(MappingProfile));
 
 builder.Services.AddControllers();
 // Learn more about configuring OpenAPI at https://aka.ms/aspnet/openapi

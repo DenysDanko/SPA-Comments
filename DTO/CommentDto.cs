@@ -6,7 +6,7 @@
         public required string UserName { get; set; }
         public required string Email { get; set; }
         public string? HomePage { get; set; }
-        public required string Text { get; set; }
+        public required string Content { get; set; }
         public string? Captcha { get; set; }
         public IFormFile? File { get; set; }
     }
@@ -18,7 +18,7 @@
         public required string UserName { get; set; }
         public required string Email { get; set; }
         public string? HomePage { get; set; }
-        public required string Text { get; set; }
+        public required string Content { get; set; }
         public string? FilePath { get; set; }
         public DateTime CreatedAt { get; set; }
         public List<CommentResponseDto> Replies { get; set; } = new();
