@@ -1,5 +1,4 @@
 ﻿using AutoMapper;
-using Azure;
 using CommentSystem.Api.Data;
 using CommentSystem.Api.Hubs;
 using Microsoft.AspNetCore.SignalR;
@@ -9,7 +8,6 @@ using SixLabors.ImageSharp.Processing;
 using SPA_Comments.DTO;
 using SPA_Comments.Models;
 using SPA_Comments.Services;
-using System.Text.RegularExpressions;
 
 namespace CommentSystem.Api.Services
 {
@@ -54,9 +52,6 @@ namespace CommentSystem.Api.Services
 
         public async Task<CommentResponseDto> CreateCommentAsync(CommentCreateDto dto)
         {
-            if (!IsValidXhtml(dto.Content))
-                throw new ArgumentException("The text contains prohibited or incorrect tags.");
-
             Comment? comment = _mapper.Map<Comment>(dto);
 
             if (dto.File != null)
@@ -72,20 +67,6 @@ namespace CommentSystem.Api.Services
             await _hubContext.Clients.All.SendAsync("ReceiveComment", response);
 
             return response;
-        }
-
-        private bool IsValidXhtml(string text)
-        {
-            string[]? allowedTags = { "a", "code", "i", "strong" };
-            Regex? tagRegex = new Regex(@"<(/?[a-zA-Z0-9]+)[^>]*>");
-            MatchCollection matches = tagRegex.Matches(text);
-
-            foreach (Match match in matches)
-            {
-                string? tagName = match.Groups[1].Value.Replace("/", "").ToLower();
-                if (!allowedTags.Contains(tagName)) return false;
-            }
-            return true;
         }
 
         private async Task<string?> ProcessFileAsync(IFormFile file)

@@ -2,6 +2,9 @@ using CommentSystem.Api.Data;
 using CommentSystem.Api.Hubs;
 using CommentSystem.Api.Mappings;
 using CommentSystem.Api.Services;
+using CommentSystem.Api.Validators;
+using FluentValidation;
+using FluentValidation.AspNetCore;
 using Microsoft.EntityFrameworkCore;
 using SPA_Comments.Services;
 
@@ -27,6 +30,10 @@ builder.Services.AddCors(options =>
               .AllowCredentials();
     });
 });
+
+builder.Services.AddFluentValidationAutoValidation();
+
+builder.Services.AddValidatorsFromAssemblyContaining<CommentCreateDtoValidator>();
 
 builder.Services.AddControllers();
 // Learn more about configuring OpenAPI at https://aka.ms/aspnet/openapi
