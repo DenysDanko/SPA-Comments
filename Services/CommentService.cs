@@ -1,5 +1,8 @@
 ﻿using AutoMapper;
+using Azure;
 using CommentSystem.Api.Data;
+using CommentSystem.Api.Hubs;
+using Microsoft.AspNetCore.SignalR;
 using Microsoft.EntityFrameworkCore;
 using SixLabors.ImageSharp;
 using SixLabors.ImageSharp.Processing;
@@ -15,13 +18,15 @@ namespace CommentSystem.Api.Services
         private readonly ApplicationDbContext _context;
         private readonly IWebHostEnvironment _env;
         private readonly IMapper _mapper;
+        private readonly IHubContext<CommentHub> _hubContext;
         private const int PageSize = 25;
 
-        public CommentService(ApplicationDbContext context, IWebHostEnvironment env, IMapper mapper)
+        public CommentService(ApplicationDbContext context, IWebHostEnvironment env, IMapper mapper, IHubContext<CommentHub> hubContext)
         {
             _context = context;
             _env = env;
             _mapper = mapper;
+            _hubContext = hubContext;
         }
 
         public async Task<(IEnumerable<CommentResponseDto> Items, int TotalCount)> GetPagedCommentsAsync(int page, string sortBy, bool desc)
@@ -62,7 +67,11 @@ namespace CommentSystem.Api.Services
             _context.Comments.Add(comment);
             await _context.SaveChangesAsync();
 
-            return _mapper.Map<CommentResponseDto>(comment);
+            CommentResponseDto? response = _mapper.Map<CommentResponseDto>(comment);
+
+            await _hubContext.Clients.All.SendAsync("ReceiveComment", response);
+
+            return response;
         }
 
         private bool IsValidXhtml(string text)
