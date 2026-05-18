@@ -8,6 +8,8 @@
         public string? HomePage { get; set; }
         public required string Content { get; set; }
         public string? Captcha { get; set; }
+        public required string CaptchaId { get; set; }
+        public required string CaptchaAnswer { get; set; }
         public IFormFile? File { get; set; }
     }
 

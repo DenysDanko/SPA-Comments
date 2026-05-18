@@ -17,14 +17,17 @@ namespace CommentSystem.Api.Services
         private readonly IWebHostEnvironment _env;
         private readonly IMapper _mapper;
         private readonly IHubContext<CommentHub> _hubContext;
+        private readonly ICaptchaService _captchaService;
         private const int PageSize = 25;
 
-        public CommentService(ApplicationDbContext context, IWebHostEnvironment env, IMapper mapper, IHubContext<CommentHub> hubContext)
+        public CommentService(ApplicationDbContext context, IWebHostEnvironment env, IMapper mapper, 
+            IHubContext<CommentHub> hubContext, ICaptchaService captchaService)
         {
             _context = context;
             _env = env;
             _mapper = mapper;
             _hubContext = hubContext;
+            _captchaService = captchaService;
         }
 
         public async Task<(IEnumerable<CommentResponseDto> Items, int TotalCount)> GetPagedCommentsAsync(int page, string sortBy, bool desc)
@@ -52,6 +55,9 @@ namespace CommentSystem.Api.Services
 
         public async Task<CommentResponseDto> CreateCommentAsync(CommentCreateDto dto)
         {
+            if (!_captchaService.ValidateCaptcha(dto.CaptchaId, dto.CaptchaAnswer))
+                throw new ArgumentException("Invalid captcha.");
+
             Comment? comment = _mapper.Map<Comment>(dto);
 
             if (dto.File != null)

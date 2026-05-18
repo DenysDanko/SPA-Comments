@@ -15,6 +15,7 @@ builder.Services.AddDbContext<ApplicationDbContext>(options =>
     options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
 
 builder.Services.AddScoped<ICommentService, CommentService>();
+builder.Services.AddScoped<ICaptchaService, CaptchaService>();
 
 builder.Services.AddAutoMapper(cfg => { }, typeof(MappingProfile));
 
@@ -34,6 +35,8 @@ builder.Services.AddCors(options =>
 builder.Services.AddFluentValidationAutoValidation();
 
 builder.Services.AddValidatorsFromAssemblyContaining<CommentCreateDtoValidator>();
+
+builder.Services.AddMemoryCache();
 
 builder.Services.AddControllers();
 // Learn more about configuring OpenAPI at https://aka.ms/aspnet/openapi
