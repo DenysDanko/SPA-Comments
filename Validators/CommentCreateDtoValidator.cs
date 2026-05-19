@@ -10,7 +10,7 @@ namespace CommentSystem.Api.Validators
         {
             RuleFor(x => x.UserName)
                 .NotEmpty().WithMessage("User Name is required.")
-                .Matches("^[a-zA-Z0-9]*$").WithMessage("User Name can only contain Latin letters and numbers.");
+                .Matches(@"^[a-zA-Z0-9\s]+$").WithMessage("User Name can only contain Latin letters, numbers and spaces.");
 
             RuleFor(x => x.Email)
                 .NotEmpty().WithMessage("E-mail is required.")
