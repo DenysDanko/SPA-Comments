@@ -3,6 +3,7 @@ using CommentSystem.Api.Data;
 using CommentSystem.Api.Hubs;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Caching.Memory;
 using SixLabors.ImageSharp;
 using SixLabors.ImageSharp.Processing;
 using SPA_Comments.DTO;
@@ -18,45 +19,60 @@ namespace CommentSystem.Api.Services
         private readonly IMapper _mapper;
         private readonly IHubContext<CommentHub> _hubContext;
         private readonly ICaptchaService _captchaService;
+        private readonly IMemoryCache _memoryCache;
         private const int PageSize = 25;
 
         public CommentService(ApplicationDbContext context, IWebHostEnvironment env, IMapper mapper, 
-            IHubContext<CommentHub> hubContext, ICaptchaService captchaService)
+            IHubContext<CommentHub> hubContext, ICaptchaService captchaService, IMemoryCache memoryCache)
         {
             _context = context;
             _env = env;
             _mapper = mapper;
             _hubContext = hubContext;
             _captchaService = captchaService;
+            _memoryCache = memoryCache;
         }
 
         public async Task<PagedCommentsResponseDto> GetPagedCommentsAsync(int page, string sortBy, bool desc)
         {
-            IQueryable<Comment> rootQuery = _context.Comments
-                .Where(c => c.ParentId == null);
+            string cacheKey = $"comments_page_{page}_{sortBy}_{desc}";
 
-            rootQuery = sortBy.ToLower() switch
+            if (!_memoryCache.TryGetValue(cacheKey, out PagedCommentsResponseDto? cachedResponse))
             {
-                "username" => desc ? rootQuery.OrderByDescending(c => c.UserName) : rootQuery.OrderBy(c => c.UserName),
-                "email" => desc ? rootQuery.OrderByDescending(c => c.Email) : rootQuery.OrderBy(c => c.Email),
-                _ => desc ? rootQuery.OrderByDescending(c => c.CreatedAt) : rootQuery.OrderBy(c => c.CreatedAt),
-            };
+                IQueryable<Comment> rootQuery = _context.Comments
+                    .Where(c => c.ParentId == null);
 
-            int totalCount = await rootQuery.CountAsync();
+                rootQuery = sortBy.ToLower() switch
+                {
+                    "username" => desc ? rootQuery.OrderByDescending(c => c.UserName) : rootQuery.OrderBy(c => c.UserName),
+                    "email" => desc ? rootQuery.OrderByDescending(c => c.Email) : rootQuery.OrderBy(c => c.Email),
+                    _ => desc ? rootQuery.OrderByDescending(c => c.CreatedAt) : rootQuery.OrderBy(c => c.CreatedAt),
+                };
 
-            List<Comment>? rootComments = await rootQuery
-                .Skip((page - 1) * PageSize)
-                .Take(PageSize)
-                .ToListAsync();
+                int totalCount = await rootQuery.CountAsync();
 
-            List<Comment>? allComments = await _context.Comments.ToListAsync();
+                List<Comment>? rootComments = await rootQuery
+                    .Skip((page - 1) * 25)
+                    .Take(25)
+                    .ToListAsync();
 
-            return new PagedCommentsResponseDto
-            {
-                RootItems = _mapper.Map<IEnumerable<CommentResponseDto>>(rootComments),
-                AllItems = _mapper.Map<IEnumerable<CommentResponseDto>>(allComments),
-                TotalCount = totalCount
-            };
+                List<Comment>? allComments = await _context.Comments.ToListAsync();
+
+                cachedResponse = new PagedCommentsResponseDto
+                {
+                    RootItems = _mapper.Map<IEnumerable<CommentResponseDto>>(rootComments),
+                    AllItems = _mapper.Map<IEnumerable<CommentResponseDto>>(allComments),
+                    TotalCount = totalCount
+                };
+
+                var cacheOptions = new MemoryCacheEntryOptions()
+                    .SetAbsoluteExpiration(TimeSpan.FromMinutes(2))
+                    .SetSlidingExpiration(TimeSpan.FromSeconds(30));
+
+                _memoryCache.Set(cacheKey, cachedResponse, cacheOptions);
+            }
+
+            return cachedResponse!;
         }
 
         public async Task<CommentResponseDto> CreateCommentAsync(CommentCreateDto dto)
@@ -73,6 +89,8 @@ namespace CommentSystem.Api.Services
 
             _context.Comments.Add(comment);
             await _context.SaveChangesAsync();
+
+            _memoryCache.Remove("comments_p1_date_true");
 
             CommentResponseDto? response = _mapper.Map<CommentResponseDto>(comment);
 
