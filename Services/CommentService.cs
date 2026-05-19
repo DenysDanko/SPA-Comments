@@ -30,27 +30,33 @@ namespace CommentSystem.Api.Services
             _captchaService = captchaService;
         }
 
-        public async Task<(IEnumerable<CommentResponseDto> Items, int TotalCount)> GetPagedCommentsAsync(int page, string sortBy, bool desc)
+        public async Task<PagedCommentsResponseDto> GetPagedCommentsAsync(int page, string sortBy, bool desc)
         {
-            IQueryable<Comment>? query = _context.Comments
-                .Include(c => c.Replies)
+            IQueryable<Comment> rootQuery = _context.Comments
                 .Where(c => c.ParentId == null);
 
-            query = sortBy.ToLower() switch
+            rootQuery = sortBy.ToLower() switch
             {
-                "username" => desc ? query.OrderByDescending(c => c.UserName) : query.OrderBy(c => c.UserName),
-                "email" => desc ? query.OrderByDescending(c => c.Email) : query.OrderBy(c => c.Email),
-                _ => desc ? query.OrderByDescending(c => c.CreatedAt) : query.OrderBy(c => c.CreatedAt),
+                "username" => desc ? rootQuery.OrderByDescending(c => c.UserName) : rootQuery.OrderBy(c => c.UserName),
+                "email" => desc ? rootQuery.OrderByDescending(c => c.Email) : rootQuery.OrderBy(c => c.Email),
+                _ => desc ? rootQuery.OrderByDescending(c => c.CreatedAt) : rootQuery.OrderBy(c => c.CreatedAt),
             };
 
-            int totalCount = await query.CountAsync();
-            List<Comment>? items = await query
+            int totalCount = await rootQuery.CountAsync();
+
+            List<Comment>? rootComments = await rootQuery
                 .Skip((page - 1) * PageSize)
                 .Take(PageSize)
                 .ToListAsync();
 
-            IEnumerable<CommentResponseDto> dtos = _mapper.Map<IEnumerable<CommentResponseDto>>(items);
-            return (dtos, totalCount);
+            List<Comment>? allComments = await _context.Comments.ToListAsync();
+
+            return new PagedCommentsResponseDto
+            {
+                RootItems = _mapper.Map<IEnumerable<CommentResponseDto>>(rootComments),
+                AllItems = _mapper.Map<IEnumerable<CommentResponseDto>>(allComments),
+                TotalCount = totalCount
+            };
         }
 
         public async Task<CommentResponseDto> CreateCommentAsync(CommentCreateDto dto)

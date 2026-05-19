@@ -24,7 +24,8 @@ namespace CommentSystem.Api.Controllers
                 totalCount = result.TotalCount,
                 page,
                 pageSize = 25,
-                items = result.Items
+                rootItems = result.RootItems,
+                allItems = result.AllItems
             });
         }
 
