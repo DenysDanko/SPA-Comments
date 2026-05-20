@@ -1,10 +1,9 @@
 ﻿using Microsoft.Extensions.Caching.Memory;
-using SixLabors.Fonts;
 using SixLabors.ImageSharp;
-using SixLabors.ImageSharp.Drawing;
 using SixLabors.ImageSharp.Drawing.Processing;
 using SixLabors.ImageSharp.PixelFormats;
 using SixLabors.ImageSharp.Processing;
+using SixLabors.Fonts;
 
 namespace CommentSystem.Api.Services
 {
@@ -19,22 +18,15 @@ namespace CommentSystem.Api.Services
         {
             string? code = new string(Enumerable.Repeat(Chars, 5).Select(s => s[new Random().Next(s.Length)]).ToArray());
             string? captchaId = Guid.NewGuid().ToString();
-
             _cache.Set(captchaId, code, TimeSpan.FromMinutes(5));
 
+            string fontPath = Path.Combine(AppContext.BaseDirectory, "Assets", "ArialBold.ttf");
+
+            var collection = new FontCollection();
+            var family = collection.Add(fontPath);
+            var font = family.CreateFont(25, FontStyle.Bold);
+
             using var image = new Image<Rgba32>(150, 50);
-
-            Font font;
-            if (SystemFonts.Collection.Families.Any(f => f.Name == "Arial"))
-            {
-                font = SystemFonts.CreateFont("Arial", 25, FontStyle.Bold);
-            }
-            else
-            {
-                var family = SystemFonts.Collection.Families.FirstOrDefault();
-                font = family.CreateFont(25, FontStyle.Bold);
-            }
-
             image.Mutate(ctx =>
             {
                 ctx.Fill(Color.White);
@@ -42,17 +34,12 @@ namespace CommentSystem.Api.Services
                 var random = new Random();
                 for (int i = 0; i < 6; i++)
                 {
-                    var p1 = new PointF(random.Next(150), random.Next(50));
-                    var p2 = new PointF(random.Next(150), random.Next(50));
-                    ctx.DrawLine(Color.Silver, 1.5f, p1, p2);
+                    ctx.DrawLine(Color.Silver, 1.5f,
+                        new PointF(random.Next(150), random.Next(50)),
+                        new PointF(random.Next(150), random.Next(50)));
                 }
 
                 ctx.DrawText(code, font, Color.Black, new PointF(20, 10));
-
-                for (int i = 0; i < 100; i++)
-                {
-                    ctx.Fill(Color.Gray, new EllipsePolygon(random.Next(150), random.Next(50), 1));
-                }
             });
 
             using var ms = new MemoryStream();
