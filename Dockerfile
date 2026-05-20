@@ -1,6 +1,6 @@
 FROM mcr.microsoft.com/dotnet/sdk:8.0 AS build
 WORKDIR /src
-COPY ["CommentSystem.Api.csproj", "./"]
+COPY ["SPA-Comments.csproj", "./"]
 RUN dotnet restore
 COPY . .
 RUN dotnet publish -c Release -o /app/publish
@@ -11,4 +11,4 @@ COPY --from=build /app/publish .
 
 RUN mkdir -p wwwroot/uploads
 EXPOSE 80
-ENTRYPOINT ["dotnet", "CommentSystem.Api.dll"]
+ENTRYPOINT ["dotnet", "SPA-Comments.dll"]
