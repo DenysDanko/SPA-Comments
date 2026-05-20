@@ -25,13 +25,14 @@ namespace CommentSystem.Api.Services
             using var image = new Image<Rgba32>(150, 50);
 
             Font font;
-            try
+            if (SystemFonts.Collection.Families.Any(f => f.Name == "Arial"))
             {
                 font = SystemFonts.CreateFont("Arial", 25, FontStyle.Bold);
             }
-            catch
+            else
             {
-                font = SystemFonts.Collection.Families.First().CreateFont(25, FontStyle.Bold);
+                var family = SystemFonts.Collection.Families.FirstOrDefault();
+                font = family.CreateFont(25, FontStyle.Bold);
             }
 
             image.Mutate(ctx =>
