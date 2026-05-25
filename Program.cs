@@ -28,10 +28,10 @@ builder.Services.AddCors(options =>
 {
     options.AddPolicy("CorsPolicy", policy =>
     {
-        policy.WithOrigins(allowedOrigins) // Передаємо масив адрес
+        policy.WithOrigins(allowedOrigins)
               .AllowAnyHeader()
               .AllowAnyMethod()
-              .AllowCredentials(); // Обов'язково для SignalR
+              .AllowCredentials();
     });
 });
 
@@ -49,6 +49,8 @@ var app = builder.Build();
 
 app.UseCors("CorsPolicy");
 
+app.UseStaticFiles();
+
 app.MapHub<CommentHub>("/commentHub");
 
 // Configure the HTTP request pipeline.
@@ -63,13 +65,21 @@ app.UseAuthorization();
 
 app.MapControllers();
 
-app.UseStaticFiles();
-
 using (var scope = app.Services.CreateScope())
 {
     var services = scope.ServiceProvider;
-    var context = services.GetRequiredService<ApplicationDbContext>();
-    context.Database.Migrate();
+    try
+    {
+        var context = services.GetRequiredService<ApplicationDbContext>();
+        if (context.Database.CanConnect())
+        {
+            context.Database.Migrate();
+        }
+    }
+    catch (Exception ex)
+    {
+        Console.WriteLine($"Migration error: {ex.Message}");
+    }
 }
 
 app.Run();

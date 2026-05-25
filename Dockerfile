@@ -1,5 +1,13 @@
 FROM mcr.microsoft.com/dotnet/sdk:10.0-preview AS build
-RUN apt-get update && apt-get install -y libfontconfig1 fonts-liberation
+
+RUN apt-get update && apt-get install -y \
+    libfontconfig1 \
+    libfreetype6 \
+    libicu-dev \
+    libpng-dev \
+    libjpeg-dev \
+    && rm -rf /var/lib/apt/lists/*
+
 WORKDIR /src
 
 COPY ["SPA-Comments.csproj", "./"]
