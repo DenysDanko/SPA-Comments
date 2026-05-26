@@ -10,16 +10,21 @@ using SPA_Comments.Services;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// Add services to the container.
 builder.Services.AddDbContext<ApplicationDbContext>(options =>
-    options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
+    options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection"),
+    sqlOptions =>
+    {
+        sqlOptions.EnableRetryOnFailure(
+            maxRetryCount: 5,
+            maxRetryDelay: TimeSpan.FromSeconds(30),
+            errorNumbersToAdd: null);
+    }));
 
 builder.Services.AddScoped<ICommentService, CommentService>();
 builder.Services.AddScoped<ICaptchaService, CaptchaService>();
-
 builder.Services.AddAutoMapper(cfg => { }, typeof(MappingProfile));
-
 builder.Services.AddSignalR();
+builder.Services.AddMemoryCache();
 
 var allowedOrigins = builder.Configuration.GetSection("AllowedOrigins").Get<string[]>()
                      ?? new[] { "http://localhost:3000" };
@@ -35,35 +40,29 @@ builder.Services.AddCors(options =>
     });
 });
 
-builder.Services.AddFluentValidationAutoValidation();
-
-builder.Services.AddValidatorsFromAssemblyContaining<CommentCreateDtoValidator>();
-
-builder.Services.AddMemoryCache();
-
 builder.Services.AddControllers();
-// Learn more about configuring OpenAPI at https://aka.ms/aspnet/openapi
+builder.Services.AddFluentValidationAutoValidation();
+builder.Services.AddValidatorsFromAssemblyContaining<CommentCreateDtoValidator>();
 builder.Services.AddOpenApi();
 
 var app = builder.Build();
 
-app.UseCors("CorsPolicy");
+app.UseRouting(); 
+
+app.UseCors("CorsPolicy"); 
 
 app.UseStaticFiles();
 
-app.MapHub<CommentHub>("/commentHub");
+app.UseAuthorization();
 
-// Configure the HTTP request pipeline.
+
+app.MapHub<CommentHub>("/commentHub");
+app.MapControllers();
+
 if (app.Environment.IsDevelopment())
 {
     app.MapOpenApi();
 }
-
-app.UseHttpsRedirection();
-
-app.UseAuthorization();
-
-app.MapControllers();
 
 using (var scope = app.Services.CreateScope())
 {
@@ -71,14 +70,12 @@ using (var scope = app.Services.CreateScope())
     try
     {
         var context = services.GetRequiredService<ApplicationDbContext>();
-        if (context.Database.CanConnect())
-        {
-            context.Database.Migrate();
-        }
+        context.Database.Migrate();
+        Console.WriteLine("Database migration successful.");
     }
     catch (Exception ex)
     {
-        Console.WriteLine($"Migration error: {ex.Message}");
+        Console.WriteLine($"MIGRATION FAILED: {ex.Message}");
     }
 }
 
